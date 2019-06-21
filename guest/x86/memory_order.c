@@ -16,7 +16,7 @@
 #include "asm/spinlock.h"
 #include "atomic.h"
 
-#define USE_CPU_FENCE  0
+#define USE_CPU_FENCE  1
 #define MAX_RUNNING_CPU 3
 #define NOP()       do { asm volatile ("nop\n\t" :::"memory"); } while(0)
 
@@ -31,6 +31,7 @@ atomic_t end_sem;
 
 int X, Y;
 int r1, r2;
+int r3, r4;
 int id;
 
 int logical_processor_arbitration() {
@@ -94,8 +95,6 @@ void ap_main() {
 	while(1)
 		test_cases[local_id]();
 }
-volatile long _x, _y;
-volatile long _rx, _ry;
 
 void test1() {
 	while(atomic_read(&begin_sem1) != 1) NOP();
@@ -103,12 +102,13 @@ void test1() {
 
 	asm volatile(
 			"xor %0, %0\n\t                 "
-			"movl $1, %1\n\t                "
+			"movl $1, %2\n\t                "
 #if USE_CPU_FENCE
 			"mfence\n\t                  "
 #endif
 			"movl %2, %0\n\t                "
-			: "=r"(r1), "=m" (X)
+			"movl %3, %1\n\t                "
+			: "=r"(r3),"=r"(r1), "+m" (X)
 			: "m"(Y)
 			: "memory");
 
@@ -121,12 +121,13 @@ void test2() {
 
 	asm volatile(
 			"xor %0, %0\n\t                 "
-			"movl $1, %1\n\t                "
+			"movl $1, %2\n\t                "
 #if USE_CPU_FENCE
 			"mfence\n\t                  "
 #endif
 			"movl %2, %0\n\t                "
-			: "=r"(r2), "=m" (Y)
+			"movl %3, %1\n\t                "
+			: "=r"(r4),"=r"(r2), "=m" (Y)
 			: "m"(X)
 			: "memory");
 
