@@ -41,6 +41,7 @@ fi
 
 command="${qemu} -nodefaults $pc_testdev -vnc none -serial stdio $pci_testdev"
 command+=" -smp cpus=4 -m 1024M $cpu_info"
+command+=" -S -s"
 command+=" -machine accel=$ACCEL -kernel"
 command="$(timeout_cmd) $command"
 
