@@ -94,17 +94,23 @@ void ap_main() {
 	while(1)
 		test_cases[local_id]();
 }
+volatile long _x, _y;
+volatile long _rx, _ry;
+
 void test1() {
 	while(atomic_read(&begin_sem1) != 1) NOP();
 	atomic_dec(&begin_sem1);
 
-	X = 1;
+	asm volatile(
+			"xor %0, %0\n\t                 "
+			"movl $1, %1\n\t                "
 #if USE_CPU_FENCE
-	asm volatile("mfence" ::: "memory");  // prevent CPU ordering
-#else
-	asm volatile("" ::: "memory");  // prevent compiler ordering
+			"mfence\n\t                  "
 #endif
-	r1 = Y;
+			"movl %2, %0\n\t                "
+			: "=r"(r1), "=m" (X)
+			: "m"(Y)
+			: "memory");
 
 	atomic_inc(&end_sem);
 }
@@ -113,13 +119,16 @@ void test2() {
 	while(atomic_read(&begin_sem2) != 1) NOP();
 	atomic_dec(&begin_sem2);
 
-	Y = 1;
+	asm volatile(
+			"xor %0, %0\n\t                 "
+			"movl $1, %1\n\t                "
 #if USE_CPU_FENCE
-	asm volatile("mfence" ::: "memory"); // prevent CPU ordering
-#else
-	asm volatile("" ::: "memory");  // prevent compiler ordering
+			"mfence\n\t                  "
 #endif
-	r2 = X;
+			"movl %2, %0\n\t                "
+			: "=r"(r2), "=m" (Y)
+			: "m"(X)
+			: "memory");
 
 	atomic_inc(&end_sem);
 }
