@@ -223,7 +223,7 @@ ap_start64:
 	nop
 	lock incw cpu_online_count
 
-	call ap_main
+//	call ap_main
 
 1:	hlt
 	jmp 1b
