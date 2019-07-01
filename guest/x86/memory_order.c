@@ -56,6 +56,55 @@ int main(int ac, char **av)
 	atomic_set(&end_sem, 0);
 	setup_idt();
 
+/*
+	asm volatile(
+			"cmp %0xor %0, %0\n\t                 "
+			"movl $1, %1\n\t                "
+#if USE_CPU_FENCE
+			"mfence\n\t                  "
+#endif
+			"movl %2, %0\n\t                "
+			: "=c"(r1), "=m" (X)
+			: "m"(Y)
+			: "memory");
+*/
+	int a, d, a1 = 0;
+	int i, sum = 0;
+	while(1) {
+	for(i = 0; i < 10000000; i++) {
+
+	asm volatile(
+			"movl $1, %1\n\t                "
+			"rdtsc  \n\t"
+			"lfence \n\t"
+			"rdtsc  \n\t"
+			: "=a" (a), "=d" (d));
+
+	asm volatile(
+			"movl $1, %1\n\t                "
+			"mfence\n\t                  "
+			"movl %2, %0\n\t                "
+			: "=c"(r1), "=m" (X)
+			: "m"(Y)
+			: "memory");
+
+	//printf("a: %u; d: %u\n", a, d);
+	//printf("a-a1: %u\n", a - a1);
+	sum += a - a1;
+	a1 = a;
+	}
+	printf("sum/cnt: %u\n", sum / 10000000);
+	sum = 0;
+	}
+	
+// 1: cmp eax, [buffer_top] ; compare eax (index) to upper bound
+// 2: ja out_of_bounds ; if greater, index is too big
+// 3: lfence : serializes dispatch until branch
+// 4: mov ebx, [eax] 
+
+
+	while(1) { NOP(); }
+//////////////
 	id = 0;
 
 	for (int i = 1; ; ++i) {
@@ -82,6 +131,8 @@ int main(int ac, char **av)
 	return ret;
 }
 void ap_main() {
+	while(1) { NOP(); }
+////////////////
 	int local_id = logical_processor_arbitration();
 
 	if (local_id >= MAX_RUNNING_CPU) {
