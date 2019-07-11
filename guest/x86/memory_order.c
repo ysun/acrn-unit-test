@@ -33,8 +33,8 @@ atomic_t end_sem1;
 atomic_t end_sem2;
 
 int X, Y;
-//int ARRAY[1030];
-int *ARRAY;
+int ARRAY[1030];
+//int *ARRAY;
 int r1, r2;
 int r3, r4;
 int id;
@@ -242,7 +242,7 @@ int main(int ac, char **av)
 
 	//default PAT entry value 0007040600070406
 	mem_cache_test_set_type_all(0x0000000001040501); //00: UC 06: WB 01:WC
-	ARRAY = (int *)malloc(1030 * 4);
+	//ARRAY = (int *)malloc(1030 * 4);
 
 	mem_cache_test_write_time_invd(1030 / 2, 2);
 	id = 0;
@@ -258,7 +258,7 @@ int main(int ac, char **av)
 		atomic_set(&end_sem1, 0);
 		atomic_set(&end_sem2, 0);
 
-		if (*(ARRAY+1029) != 1029) {
+		if (ARRAY[1029] != 1029) {
 			detected++;
 			printf("%d reorders detected after %d iterations\n", detected, i);
 		}
@@ -303,10 +303,11 @@ void test1() {
 	asm volatile(
 			"movl $0, %0			\n\t"
 			"movl $1029, %1			\n\t"
-			"movl ARRAY, %%edx			\n\t"
+//			"movl ARRAY, %%edx			\n\t"
 			"begin: 			\n\t"
-//			"    lea ARRAY(,%0,4), %2	\n\t"
-			"    movntil  %0, (%%edx, %0, 4) 		\n\t"
+			"    lea ARRAY(,%0,4), %2	\n\t"
+			"    movntil  %0, (%2) 		\n\t"
+//			"    movntil  %0, (%%edx, %0, 4) 		\n\t"
 			"    inc   %0			\n\t"
 			"    cmp   %1, %0		\n\t"
 			"    jle   begin		\n\t"
@@ -333,9 +334,10 @@ void test2() {
 	atomic_dec(&begin_sem2);
 
 	asm volatile(
-			"movl ARRAY, %%ebx	\n\t                 "
+//			"movl ARRAY, %%ebx	\n\t                 "
 			"movl $1029, %%ecx	\n\t                 "
-			"movl (%%ebx, %%ecx, 0x4), %0\n\t                 "
+//			"movl (%%ebx, %%ecx, 0x4), %0\n\t                 "
+			"movl ARRAY(, %%ecx, 4), %0\n\t                 "
 			: "=r"(r4)
 			: 
 			: "ebx", "ecx");
