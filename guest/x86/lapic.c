@@ -108,12 +108,10 @@ typedef struct lapic_state_s lapic_state_t;
 
 #define CHECK_REG_ALL0(name) do { \
 GENERIC_REPORT(s->__APIC_##name == 0, #name " Reset State should be 0"); \
-if (s->__APIC_##name != 0) return 1; \
 } while(0)
 
 #define CHECK_REG_VAL(name,val) do { \
 GENERIC_REPORT(s->__APIC_##name == val, #name " Reset State should be %#10x", val); \
-if (s->__APIC_##name != val) return 1; \
 } while(0)
 
 
@@ -172,24 +170,18 @@ int lapic_check_reset_state(lapic_state_t *s) {
 	unsigned *p;
 
 	p = &LAPIC_REG_NAME(s, IRR0);
-	for (i=0; i<8; ++i) {
+	for (i=0; i<8; ++i, ++p) {
 		GENERIC_REPORT(*p == 0, "IRR%d Reset State should be 0", i);
-		if (*p != 0)
-			return 1;
 	}
 
 	p = &LAPIC_REG_NAME(s, ISR0);
-	for (i=0; i<8; ++i) {
+	for (i=0; i<8; ++i, ++p) {
 		GENERIC_REPORT(*p == 0, "ISR%d Reset State should be 0", i);
-		if (*p != 0)
-			return 1;
 	}
 
 	p = &LAPIC_REG_NAME(s, TMR0);
-	for (i=0; i<8; ++i) {
+	for (i=0; i<8; ++i, ++p) {
 		GENERIC_REPORT(*p == 0, "TMR%d Reset State should be 0", i);
-		if (*p != 0)
-			return 1;
 	}
 
 #ifdef BUGGY
@@ -209,8 +201,8 @@ int lapic_check_reset_state(lapic_state_t *s) {
 	CHECK_REG_VAL(LVT1, 0x10000);
 	CHECK_REG_VAL(LVTERR, 0x10000);
 #endif
-	GENERIC_DEBUG("The APIC Version is %#010x", LAPIC_REG_NAME(s, VERSION));
-	GENERIC_DEBUG("The APIC Version is %#010x", LAPIC_REG_NAME(s, ID));
+	CHECK_REG_VAL(VERSION, 0x1060015);
+	GENERIC_DEBUG("The APIC ID is %#010x", LAPIC_REG_NAME(s, ID));
 
 #ifdef BUGGY
 	CHECK_REG_VAL(SPIV, 0x0FF);
