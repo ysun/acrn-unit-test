@@ -293,6 +293,12 @@ int main(void)
 	lapic_read_state(&state);
 	lapic_check_reset_state(&state);
 
+	unsigned long cr8_val;
+	asm volatile ("movq %%cr8, %0": "=r"(cr8_val):: "cc");
+
+	GENERIC_REPORT(cr8_val == 0, 
+		"ACRN hypervisor shall set initial Guest CR8 to 0H following INIT/Start-up");
+
 	ret = report_summary();
 	return ret;
 }
