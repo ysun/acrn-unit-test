@@ -22,5 +22,6 @@ tests += $(TEST_DIR)/vmware_backdoors.flat
 tests += $(TEST_DIR)/hyperv_clock.flat
 tests += $(TEST_DIR)/lapic_init.flat
 tests += $(TEST_DIR)/lapic_ipi.flat
+tests += $(TEST_DIR)/lapic_timer.flat
 
 include $(SRCDIR)/$(TEST_DIR)/Makefile.common
