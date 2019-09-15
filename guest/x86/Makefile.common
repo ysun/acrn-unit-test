@@ -21,6 +21,7 @@ cflatobjs += lib/x86/acpi.o
 cflatobjs += lib/x86/stack.o
 cflatobjs += lib/x86/fault_test.o
 cflatobjs += lib/x86/delay.o
+cflatobjs += lib/x86/misc.o
 
 OBJDIRS += lib/x86
 
@@ -50,7 +51,7 @@ FLATLIBS = lib/libcflat.a $(libgcc)
 
 %.raw: %.elf
 	$(OBJCOPY) -O binary $^ $@.tmp
-	dd if=/dev/zero of=$@ bs=1 count=$(shell echo $$((0x`readelf -S $< | grep "\.text" | grep -E -o "[0-9a-f]{16}"` - 0x400000)))
+	dd if=/dev/zero of=$@ bs=1 count=$(shell echo $$((0x`readelf -S $< | grep "\.text" | grep -E -o "[0-9a-f]{$$(($(bits)/4))}"` - 0x400000)))
 	dd if=$@.tmp of=$@ conv=notrunc oflag=append
 	@rm $@.tmp
 	@chmod a-x $@
@@ -89,9 +90,10 @@ $(TEST_DIR)/stitched.elf: $(stitched-test-cases:.flat=_prelink.o) $(FLATLIBS) $(
 	@chmod a-x $@
 
 $(TEST_DIR)/%_prelink.o: $(TEST_DIR)/%.o
-	$(LD) -r -o $@ $^
+	$(LD) -m$(ldarch) -r -o $@ $^
 	@$(OBJCOPY) \
 		--keep-global-symbol=main \
+		--keep-global-symbol=save_unchanged_reg \
 		--add-symbol main_$*=.text:0x`nm $@ | grep "T main" | egrep -o "[0-9a-f]{16}"`,function,global \
 		--weaken-symbol=main \
 		$@
@@ -113,6 +115,7 @@ $(TEST_DIR)/hyperv_connections_prelink.o: $(TEST_DIR)/hyperv.o
 
 $(TEST_DIR)/vmx_prelink.o: $(TEST_DIR)/vmx_tests.o
 
+include $(TEST_DIR)/Makefile.init_startup
 arch_clean:
 	$(RM) $(TEST_DIR)/*.o $(TEST_DIR)/*.flat $(TEST_DIR)/*.elf \
 	$(TEST_DIR)/.*.d lib/x86/.*.d \

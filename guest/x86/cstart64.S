@@ -7,6 +7,7 @@ boot_idt = 0
 .globl idt_descr
 .globl tss_descr
 .globl gdt64_desc
+.globl sipi_cnt
 
 ipi_vector = 0x20
 
@@ -97,6 +98,8 @@ mb_boot_info:	.quad 0
 
 pt_root:	.quad ptl4
 
+sipi_cnt:   .byte 0
+
 .section .init
 
 .code32
@@ -119,6 +122,9 @@ MSR_GS_BASE = 0xc0000101
 
 .globl start
 start:
+#ifdef BP_STARTUP_CHECK
+	#include BP_STARTUP_CHECK
+#endif
 	mov %ebx, mb_boot_info
 	mov $stacktop, %esp
 	setup_percpu_area
@@ -187,6 +193,9 @@ gdt32_end:
 
 .code16
 sipi_entry:
+#ifdef AP_INIT_CHECK
+	#include AP_INIT_CHECK
+#endif
 	mov %cr0, %eax
 	or $1, %eax
 	mov %eax, %cr0
@@ -218,10 +227,13 @@ ap_start64:
 	call load_tss
 	call enable_apic
 	call enable_x2apic
+#ifdef AP_UNCHANGED_CHECK
+	#call save_unchanged_reg
+#endif
 	sti
 	nop
 	lock incw cpu_online_count
-
+	lock incb sipi_cnt
 1:	hlt
 	jmp 1b
 

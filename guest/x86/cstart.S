@@ -4,11 +4,13 @@
 .globl boot_idt
 boot_idt = 0
 
+.globl sipi_cnt
+
 ipi_vector = 0x20
 
 max_cpus = 64
 
-.bss
+.data
 
 	. = . + 4096 * max_cpus
 	.align 16
@@ -18,15 +20,13 @@ stacktop:
 	.align 16
 ring0stacktop:
 
-.data
-
 .align 4096
 pt:
 i = 0
-        .rept 1024
-        .long 0x1e7 | (i << 22)
-        i = i + 1
-        .endr
+	.rept 1024
+	.long 0x1e7 | (i << 22)
+	i = i + 1
+	.endr
 
 .globl gdt32
 gdt32:
@@ -49,28 +49,30 @@ gdt32:
 	.quad 0
 
 tss_descr:
-        .rept max_cpus
-        .quad 0x000089000000ffff // 32-bit avail tss
-        .endr
+	.rept max_cpus
+	.quad 0x000089000000ffff // 32-bit avail tss
+	.endr
 gdt32_end:
 
 i = 0
 .globl tss
 tss:
-        .rept max_cpus
-        .long 0
-        .long ring0stacktop - i * 4096
-        .long 16
-        .quad 0, 0
-        .quad 0, 0, 0, 0, 0, 0, 0, 0
-        .long 0, 0, 0
-        i = i + 1
-        .endr
+	.rept max_cpus
+	.long 0
+	.long ring0stacktop - i * 4096
+	.long 16
+	.quad 0, 0
+	.quad 0, 0, 0, 0, 0, 0, 0, 0
+	.long 0, 0, 0
+	i = i + 1
+	.endr
 tss_end:
 
 idt_descr:
 	.word 16 * 256 - 1
 	.long boot_idt
+
+sipi_cnt:	.byte 0
 
 .section .init
 
@@ -94,19 +96,23 @@ MSR_GS_BASE = 0xc0000101
 
 .globl start
 start:
-        mov $stacktop, %esp
-        push %ebx
-        call setup_multiboot
-        call setup_libcflat
-        mov mb_cmdline(%ebx), %eax
-        mov %eax, __args
-        call __setup_args
-        setup_percpu_area
-        call prepare_32
-        jmpl $8, $start32
+#ifdef BP_STARTUP_CHECK
+	#include BP_STARTUP_CHECK
+#endif
+	mov $stacktop, %esp
+	push %ebx
+	call bss_init
+	call setup_multiboot
+	call setup_libcflat
+	mov mb_cmdline(%ebx), %eax
+	mov %eax, __args
+	call __setup_args
+	setup_percpu_area
+	call prepare_32
+	jmpl $8, $start32
 
 prepare_32:
-        lgdtl gdt32_descr
+	lgdtl gdt32_descr
 
 	mov %cr4, %eax
 	bts $4, %eax  // pse
@@ -137,9 +143,13 @@ ap_start32:
 	call load_tss
 	call enable_apic
 	call enable_x2apic
+#ifdef AP_UNCHANGED_CHECK
+	#call save_unchanged_reg
+#endif
 	sti
 	nop
 	lock incw cpu_online_count
+	lock incb sipi_cnt
 
 1:	hlt
 	jmp 1b
@@ -156,10 +166,10 @@ start32:
 	call enable_apic
 	call smp_init
 	call enable_x2apic
-        push $__environ
-        push $__argv
-        push __argc
-        call main
+	push $__environ
+	push $__argv
+	push __argc
+	call main
 	push %eax
 	call exit
 
@@ -209,6 +219,9 @@ cpu_online_count:	.word 1
 
 .code16
 sipi_entry:
+#ifdef AP_INIT_CHECK
+	#include AP_INIT_CHECK
+#endif
 	mov %cr0, %eax
 	or $1, %eax
 	mov %eax, %cr0

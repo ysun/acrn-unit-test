@@ -69,7 +69,7 @@ COMMON_CFLAGS += $(if $(U32_LONG_FMT),-D__U32_LONG_FMT__,)
 COMMON_CFLAGS += $(fno_pic) $(no_pie)
 
 CFLAGS += $(COMMON_CFLAGS)
-CFLAGS += -Wmissing-parameter-type -Wold-style-declaration -Woverride-init
+CFLAGS += -Wmissing-parameter-type -Wold-style-declaration -Woverride-init -Wno-unused-function
 
 CXXFLAGS += $(COMMON_CFLAGS)
 

@@ -75,12 +75,21 @@ typedef struct  __attribute__((packed)) {
 	u16 iomap_base;
 } tss64_t;
 
+#ifdef __x86_64__
 #define ASM_TRY(catch)                                  \
     "movl $0, %%gs:4 \n\t"                              \
     ".pushsection .data.ex \n\t"                        \
     ".quad 1111f, " catch "\n\t"                        \
     ".popsection \n\t"                                  \
     "1111:"
+#else
+#define ASM_TRY(catch)                                  \
+    "movl $0, %%gs:4 \n\t"                              \
+    ".pushsection .data.ex \n\t"                        \
+    ".long 1111f, " catch "\n\t"                        \
+    ".popsection \n\t"                                  \
+    "1111:"
+#endif
 
 #define DB_VECTOR   1
 #define BP_VECTOR   3

@@ -8,6 +8,7 @@
 #include "libcflat.h"
 #include "fwcfg.h"
 #include "alloc_phys.h"
+#include "apic.h"
 
 extern char bss_start;
 extern char edata;
@@ -34,6 +35,7 @@ struct mbi_module {
 	u32 unused;
 };
 
+
 #define ENV_SIZE 16384
 
 extern void setup_env(char *env, int size);
@@ -42,6 +44,8 @@ char *initrd;
 u32 initrd_size;
 
 static char env[ENV_SIZE];
+
+extern unsigned char sipi_cnt;
 
 void bss_init(void)
 {
@@ -74,3 +78,29 @@ void setup_libcflat(void)
 		setup_env(env, size);
 	}
 }
+/* --------------------------------------------------------*
+*void send_sipi(): send sipi to all aps
+*This function will wait AP ;until AP initilize completely
+*
+*
+*----------------------------------------------------------*/
+void send_sipi()
+{
+	unsigned nb_cpus;
+	unsigned ap_cpus;
+	unsigned char sipi_nb_cnt;
+
+	nb_cpus = fwcfg_get_nb_cpus();
+	ap_cpus = nb_cpus - 1;
+	sipi_nb_cnt = sipi_cnt;
+
+	/*issue sipi to awake AP */
+	apic_icr_write(APIC_DEST_ALLBUT | APIC_DEST_PHYSICAL | APIC_DM_INIT | APIC_INT_ASSERT, 0);
+	apic_icr_write(APIC_DEST_ALLBUT | APIC_DEST_PHYSICAL | APIC_DM_INIT , 0);
+	apic_icr_write(APIC_DEST_ALLBUT | APIC_DEST_PHYSICAL | APIC_DM_STARTUP , 0);
+	/*waiting all aps initilize completely*/
+	while ((sipi_nb_cnt + ap_cpus) > sipi_cnt){
+		asm volatile("nop");
+	}
+}
+

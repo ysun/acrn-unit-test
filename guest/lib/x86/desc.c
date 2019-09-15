@@ -230,12 +230,13 @@ void setup_idt(void)
         return;
     }
     idt_initialized = true;
-    for (i = 0; i < 32; i++)
-	    if (idt_handlers[i])
-		    set_idt_entry(i, idt_handlers[i], 0);
-    handle_exception(0, check_exception_table);
-    handle_exception(6, check_exception_table);
-    handle_exception(13, check_exception_table);
+    for (i = 0; i < 32; i++) {
+	if (idt_handlers[i])
+	    set_idt_entry(i, idt_handlers[i], 0);
+    }
+    for (i = 0; i < 21; i++) {
+	handle_exception(i, check_exception_table);
+    }
 }
 
 unsigned exception_vector(void)
